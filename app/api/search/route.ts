@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { pipeline } from "@xenova/transformers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,27 +9,66 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-let extractorPromise: any = null;
+const HF_TOKEN = process.env.HF_TOKEN;
 
-async function getExtractor() {
-  if (!extractorPromise) {
-    extractorPromise = pipeline(
-      "feature-extraction",
-      "Xenova/all-MiniLM-L6-v2"
-    );
+function normalizeVector(vector: number[]) {
+  const norm = Math.sqrt(vector.reduce((sum, x) => sum + x * x, 0));
+  return vector.map((x) => x / norm);
+}
+
+function meanPool(tokenEmbeddings: number[][]) {
+  const dim = tokenEmbeddings[0].length;
+  const pooled = new Array(dim).fill(0);
+
+  for (const token of tokenEmbeddings) {
+    for (let i = 0; i < dim; i++) {
+      pooled[i] += token[i];
+    }
   }
-  return extractorPromise;
+
+  return pooled.map((x) => x / tokenEmbeddings.length);
 }
 
 async function getEmbedding(query: string): Promise<number[]> {
-  const extractor = await getExtractor();
+  if (!HF_TOKEN) {
+    throw new Error("HF_TOKEN is missing");
+  }
 
-  const output = await extractor(query, {
-    pooling: "mean",
-    normalize: true,
-  });
+  const res = await fetch(
+   "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HF_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inputs: query,
+        options: {
+          wait_for_model: true,
+        },
+      }),
+    }
+  );
 
-  return Array.from(output.data);
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Hugging Face embedding error: ${errorText}`);
+  }
+
+  const data = await res.json();
+
+  let embedding: number[];
+
+  if (Array.isArray(data[0]) && typeof data[0][0] === "number") {
+    embedding = meanPool(data as number[][]);
+  } else if (Array.isArray(data) && typeof data[0] === "number") {
+    embedding = data as number[];
+  } else {
+    throw new Error("Unexpected embedding response format");
+  }
+
+  return normalizeVector(embedding);
 }
 
 export async function GET(req: Request) {
@@ -51,7 +88,7 @@ export async function GET(req: Request) {
     });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      throw new Error(error.message);
     }
 
     const results = (data || []).map((item: any) => ({
@@ -68,6 +105,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ results });
   } catch (err: any) {
+    console.error("Search API error:", err);
     return NextResponse.json(
       { error: err.message || "Search failed" },
       { status: 500 }
