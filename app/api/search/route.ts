@@ -35,7 +35,7 @@ async function getEmbedding(query: string): Promise<number[]> {
   }
 
   const res = await fetch(
-   "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction",
+    "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction",
     {
       method: "POST",
       headers: {
@@ -74,17 +74,30 @@ async function getEmbedding(query: string): Promise<number[]> {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+
     const q = searchParams.get("q");
+    const yearParam = searchParams.get("year");
+
+    const selectedYear =
+      yearParam && yearParam !== "all" ? Number(yearParam) : null;
 
     if (!q || !q.trim()) {
       return NextResponse.json({ results: [] });
+    }
+
+    if (selectedYear !== null && Number.isNaN(selectedYear)) {
+      return NextResponse.json(
+        { error: "Invalid year parameter" },
+        { status: 400 }
+      );
     }
 
     const embedding = await getEmbedding(q);
 
     const { data, error } = await supabase.rpc("match_newspaper_chunks", {
       query_embedding: embedding,
-      match_count: 10,
+      match_count: 20,
+      filter_year: selectedYear,
     });
 
     if (error) {
@@ -93,6 +106,8 @@ export async function GET(req: Request) {
 
     const results = (data || []).map((item: any) => ({
       id: item.id,
+      page_id: item.page_id,
+      year: item.year,
       issue: item.issue,
       page: item.page,
       date: item.date,
@@ -103,9 +118,14 @@ export async function GET(req: Request) {
       similarity: item.similarity,
     }));
 
-    return NextResponse.json({ results });
+    return NextResponse.json({
+      query: q,
+      year: selectedYear,
+      results,
+    });
   } catch (err: any) {
     console.error("Search API error:", err);
+
     return NextResponse.json(
       { error: err.message || "Search failed" },
       { status: 500 }
