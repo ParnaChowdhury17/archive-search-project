@@ -1,42 +1,28 @@
 "use client";
 
 import { useState } from "react";
-
-type Result = {
-  id: string;
-  page_id?: string;
-  year?: number;
-  issue: string;
-  page: string;
-  date: string | null;
-  headline: string | null;
-  snippet: string;
-  image_path: string;
-  image_url: string | null;
-  similarity?: number;
-};
-
-const YEARS = [
-  { label: "All years", value: "all" },
-  { label: "1939", value: "1939" },
-  { label: "1944", value: "1944" },
-  { label: "1945", value: "1945" },
-  { label: "1946", value: "1946" },
-];
+import { AppHeader } from "@/components/app-header";
+import { SearchBar } from "@/components/search-bar";
+import { ArticleCard, SearchResult } from "@/components/article-card";
+import { ArticleModal } from "@/components/article-modal";
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
-  const [results, setResults] = useState<Result[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
+  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
 
-  async function search() {
+  // Trigger search API call
+  async function handleSearch() {
     if (!query.trim()) return;
 
     setLoading(true);
     setError("");
     setResults([]);
+    setHasSearched(true);
 
     try {
       const params = new URLSearchParams({
@@ -48,115 +34,150 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Search failed");
+        setError(data.error || "Failed to retrieve search results.");
         return;
       }
 
       setResults(data.results || []);
-    } catch {
-      setError("Something went wrong.");
+    } catch (err) {
+      console.error("Search API error:", err);
+      setError("An unexpected error occurred. Please verify your connection.");
     } finally {
       setLoading(false);
     }
   }
 
+  // Clear query and search results
+  function handleClear() {
+    setQuery("");
+    setResults([]);
+    setHasSearched(false);
+    setError("");
+  }
+
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 p-8">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">
-          Historical Newspaper Semantic Search
-        </h1>
+    <div className="min-h-screen bg-grid relative text-neutral-100 font-sans selection:bg-purple-500/30 selection:text-purple-200">
+      {/* Visual background glow elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-900/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-teal-900/10 blur-[120px] pointer-events-none" />
 
-        <p className="text-neutral-400 mb-6">
-          Search Amrita Bazar Patrika archive pages by meaning, not only exact
-          keywords.
-        </p>
+      {/* Sticky Header */}
+      <AppHeader />
 
-        <div className="flex flex-col md:flex-row gap-3 mb-8">
-          <input
-            className="flex-1 rounded-xl bg-neutral-900 border border-neutral-700 px-4 py-3 outline-none"
-            placeholder="Try: German postwar industry, India Russia relations..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") search();
-            }}
-          />
-
-          <select
-            className="rounded-xl bg-neutral-900 border border-neutral-700 px-4 py-3 outline-none text-neutral-100"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-          >
-            {YEARS.map((year) => (
-              <option key={year.value} value={year.value}>
-                {year.label}
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={search}
-            disabled={loading}
-            className="rounded-xl bg-white text-black px-5 py-3 font-medium disabled:opacity-60"
-          >
-            {loading ? "Searching..." : "Search"}
-          </button>
-        </div>
-
-        {error && <p className="text-red-400 mb-4">{error}</p>}
-
-        {!loading && results.length > 0 && (
-          <p className="text-neutral-400 mb-4">
-            Found {results.length} semantic matches
-            {selectedYear !== "all" ? ` from ${selectedYear}` : ""}
-          </p>
-        )}
-
-        {!loading && query && results.length === 0 && !error && (
-          <p className="text-neutral-500 mb-4">
-            No results found
-            {selectedYear !== "all" ? ` for ${selectedYear}` : ""}.
-          </p>
-        )}
-
-        <div className="space-y-4">
-          {results.map((r) => (
-            <div
-              key={r.id}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
+      {/* Main Container */}
+      <main className="max-w-6xl mx-auto px-6 py-12 md:py-20 flex flex-col items-center">
+        
+        {/* Hero Section */}
+        <section className="text-center max-w-3xl mb-12 flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/20 bg-purple-500/5 text-purple-300 text-xs font-medium mb-4">
+            <svg
+              className="w-3.5 h-3.5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
             >
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <h2 className="text-xl font-semibold">
-                  {r.headline || "Untitled page"}
-                </h2>
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            AI-Powered Newspaper Index Search
+          </div>
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 leading-tight">
+            Explore History <br className="sm:hidden" />
+            <span className="gradient-text font-black">Semantically</span>
+          </h1>
+          <p className="text-neutral-400 text-sm md:text-base leading-relaxed max-w-xl">
+            Search through the Amrita Bazar Patrika archives by contextual meaning and concept representation, going far beyond raw keyword matches.
+          </p>
+        </section>
 
-                {r.year && (
-                  <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs text-neutral-300">
-                    {r.year}
-                  </span>
-                )}
+        {/* Search Bar / Input Controls */}
+        <section className="w-full max-w-3xl mb-10">
+          <SearchBar
+            query={query}
+            setQuery={setQuery}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            onSearch={handleSearch}
+            onClear={handleClear}
+            loading={loading}
+          />
+        </section>
+
+        {/* Results Info and Listing */}
+        <section className="w-full max-w-3xl">
+          
+          {/* Loading State */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-20 animate-pulse" role="status" aria-live="polite">
+              <div className="w-12 h-12 rounded-full border-2 border-t-purple-500 border-white/10 animate-spin mb-4" />
+              <span className="text-sm text-neutral-400">Scanning historical clippings...</span>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <div className="glass-card p-6 border-red-500/20 bg-red-500/5 text-center flex flex-col items-center justify-center" role="alert">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-3 text-red-400">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
               </div>
+              <h3 className="font-semibold text-white mb-1">Search Interrupted</h3>
+              <p className="text-neutral-400 text-sm max-w-md">{error}</p>
+            </div>
+          )}
 
-              <p className="text-sm text-neutral-400 mb-3">
-                {r.date || "Unknown date"} · {r.issue} · {r.page}
-              </p>
-
-              <p className="text-neutral-200 leading-relaxed mb-3">
-                {r.snippet}
-              </p>
-
-              <p className="text-xs text-neutral-500 mb-1">
-                Score: {r.similarity?.toFixed(3)}
-              </p>
-
-              <p className="text-xs text-neutral-500 break-all">
-                Image: {r.image_url || r.image_path}
+          {/* Empty State */}
+          {hasSearched && !loading && !error && results.length === 0 && (
+            <div className="glass-card p-10 text-center flex flex-col items-center justify-center">
+              <div className="w-14 h-14 rounded-full bg-neutral-900/50 flex items-center justify-center mb-4 text-neutral-500 border border-white/5">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-neutral-200 mb-1">No Matches Found</h3>
+              <p className="text-neutral-400 text-sm max-w-md">
+                We couldn&apos;t find any clippings matching &ldquo;{query}&rdquo;
+                {selectedYear !== "all" ? ` in ${selectedYear}` : ""}. Try adjusting the phrasing of your concept.
               </p>
             </div>
-          ))}
-        </div>
-      </div>
-    </main>
+          )}
+
+          {/* Results State */}
+          {!loading && !error && results.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center px-1 text-sm text-neutral-400">
+                <p>
+                  Found <span className="text-purple-400 font-semibold">{results.length}</span> matches 
+                  {selectedYear !== "all" ? ` for the year ${selectedYear}` : ""}
+                </p>
+                <span className="text-xs text-neutral-500">Sorted by semantic confidence</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {results.map((item) => (
+                  <ArticleCard
+                    key={item.id}
+                    item={item}
+                    onClick={() => setSelectedResult(item)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="mt-auto border-t border-white/5 py-8 text-center text-xs text-neutral-500 bg-neutral-950/20 backdrop-blur-sm">
+        <p>&copy; {new Date().getFullYear()} Rittika Archive Project. All rights reserved.</p>
+        <p className="mt-1.5 text-[10px] text-neutral-600">Amrita Bazar Patrika digital restoration archives.</p>
+      </footer>
+
+      {/* Expanded OCR Result Modal */}
+      <ArticleModal
+        item={selectedResult}
+        onClose={() => setSelectedResult(null)}
+      />
+    </div>
   );
 }
