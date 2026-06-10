@@ -96,7 +96,7 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabase.rpc("match_newspaper_chunks", {
       query_embedding: embedding,
-      match_count: 20,
+      match_count: 150, // Request more candidate matches to scan down to 25% accuracy
       filter_year: selectedYear,
     });
 
@@ -104,19 +104,21 @@ export async function GET(req: Request) {
       throw new Error(error.message);
     }
 
-    const results = (data || []).map((item: any) => ({
-      id: item.id,
-      page_id: item.page_id,
-      year: item.year,
-      issue: item.issue,
-      page: item.page,
-      date: item.date,
-      headline: item.headline,
-      snippet: item.chunk_text,
-      image_path: item.image_path,
-      image_url: item.image_url,
-      similarity: item.similarity,
-    }));
+    const results = (data || [])
+      .map((item: any) => ({
+        id: item.id,
+        page_id: item.page_id,
+        year: item.year,
+        issue: item.issue,
+        page: item.page,
+        date: item.date,
+        headline: item.headline,
+        snippet: item.chunk_text,
+        image_path: item.image_path,
+        image_url: item.image_url,
+        similarity: item.similarity,
+      }))
+      .filter((item: any) => item.similarity >= 0.25); // Filter for matches with >= 25% accuracy
 
     return NextResponse.json({
       query: q,
