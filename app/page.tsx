@@ -69,22 +69,12 @@ export default function Home() {
         
         {/* Hero Section */}
         <section className="text-center max-w-3xl mb-12 flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/20 bg-purple-500/5 text-purple-300 text-xs font-medium mb-4">
-            <svg
-              className="w-3.5 h-3.5"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            AI-Powered Newspaper Index Search
-          </div>
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 leading-tight">
             Explore History <br className="sm:hidden" />
             <span className="gradient-text font-black">Semantically</span>
           </h1>
           <p className="text-neutral-400 text-sm md:text-base leading-relaxed max-w-xl">
-            Search through the Amrita Bazar Patrika archives by contextual meaning and concept representation, going far beyond raw keyword matches.
+            Search through the Amrita Bazar Patrika archives by year by context.
           </p>
         </section>
 
@@ -146,7 +136,7 @@ export default function Home() {
             <div className="space-y-6">
               <div className="flex justify-between items-center px-1 text-sm text-neutral-400">
                 <p>
-                  Found <span className="text-purple-400 font-semibold">{results.length}</span> matches 
+                  Showing the top <span className="text-purple-400 font-semibold">{results.length}</span> matches... 
                   {selectedYear !== "all" ? ` for the year ${selectedYear}` : ""}
                 </p>
                 <span className="text-xs text-neutral-500">Sorted by semantic confidence</span>
@@ -169,7 +159,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="mt-auto border-t border-white/5 py-8 text-center text-xs text-neutral-500 bg-neutral-950/20 backdrop-blur-sm">
-        <p>&copy; {new Date().getFullYear()} Rittika Archive Project. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} Historical Archive Search Project. All rights reserved.</p>
         <p className="mt-1.5 text-[10px] text-neutral-600">Amrita Bazar Patrika digital restoration archives.</p>
       </footer>
 

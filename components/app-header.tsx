@@ -18,12 +18,7 @@ export function AppHeader() {
           </svg>
         </div>
         <span className="font-semibold text-lg tracking-wide bg-gradient-to-r from-neutral-100 to-neutral-300 bg-clip-text text-transparent">
-          Rittika Archive
-        </span>
-      </div>
-      <div className="flex items-center gap-4 text-xs font-medium text-neutral-400">
-        <span className="hidden sm:inline px-3 py-1.5 rounded-full border border-white/5 bg-white/[0.02] backdrop-blur-md">
-          Semantic Search V1.0
+          Historical Archive Search
         </span>
       </div>
     </header>
